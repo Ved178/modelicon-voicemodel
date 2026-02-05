@@ -18,7 +18,7 @@ def main():
     py = os.path.join(VENV_DIR, "Scripts", "python.exe")
 
     # Install deps if missing
-    run(f'"{py}" -m pip install streamlit sounddevice tensorflow==2.10.0 numpy librosa soundfile')
+    run(f'"{py}" -m pip install streamlit sounddevice tensorflow numpy librosa soundfile')
 
     # Launch Streamlit app
     print("Starting Streamlit...")
