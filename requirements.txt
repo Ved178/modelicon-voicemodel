@@ -1,0 +1,8 @@
+tensorflow
+numpy
+librosa
+soundfile
+streamlit
+scikit-learn
+pandas
+sounddevice
