@@ -5,11 +5,8 @@ import soundfile as sf
 import tensorflow as tf
 import time
 import queue
-import sounddevice as sd   # <-- new dependency for real-time mic
+import sounddevice as sd
 
-# -------------------------------------------------
-# LOAD TFLITE MODEL
-# -------------------------------------------------
 @st.cache_resource
 def load_model():
     interpreter = tf.lite.Interpreter(model_path="models/mantra_cnn.tflite")
@@ -28,9 +25,6 @@ TARGET_W = 38
 LOUD_ENOUGH = 0.02
 CONF_THRESH = 0.80
 
-# -------------------------------------------------
-# AUDIO → MEL
-# -------------------------------------------------
 def audio_to_mel(audio):
     mel = librosa.feature.melspectrogram(
         y=audio,
@@ -39,11 +33,11 @@ def audio_to_mel(audio):
     )
     mel_db = librosa.power_to_db(mel, ref=np.max)
 
-    # ---- FIX: make width always = 38 ----
+
     h, w = mel_db.shape
 
     if w > TARGET_W:
-        mel_db = mel_db[:, :TARGET_W]        # crop
+        mel_db = mel_db[:, :TARGET_W]
     elif w < TARGET_W:
         pad = TARGET_W - w
         mel_db = np.pad(mel_db, ((0,0),(0,pad)), mode="constant")
@@ -55,18 +49,15 @@ def energy(chunk):
 
 def run_inference(mel):
     
-    mel = mel[..., np.newaxis]      # (64, 38, 1)
-    mel = np.expand_dims(mel, 0)    # (1, 64, 38, 1)
+    mel = mel[..., np.newaxis]
+    mel = np.expand_dims(mel, 0)
 
     interpreter.set_tensor(input_details[0]['index'], mel)
     interpreter.invoke()
 
     out = interpreter.get_tensor(output_details[0]['index']).copy()
-    return out[0]   # [p_non_mantra, p_mantra]
+    return out[0]
 
-# -------------------------------------------------
-# STREAMLIT UI
-# -------------------------------------------------
 st.title("AI-Based Mantra Counter")
 
 st.markdown("""
@@ -76,7 +67,6 @@ st.markdown("""
 start = st.button("Start Listening")
 stop = st.button("Stop")
 
-# Live display placeholders
 count_box = st.empty()
 status_box = st.empty()
 
@@ -90,9 +80,6 @@ if "count" not in st.session_state:
 if "last_count_time" not in st.session_state:
     st.session_state.last_count_time = 0
 
-# -------------------------------------------------
-# REAL-TIME AUDIO STREAM
-# -------------------------------------------------
 audio_q = queue.Queue()
 
 def audio_callback(indata, frames, time_info, status):
@@ -116,10 +103,10 @@ def process_stream():
             try:
                 chunk = audio_q.get(timeout=0.1).flatten()
 
-                # update rolling buffer
+
                 buffer = np.concatenate([buffer[len(chunk):], chunk])
 
-                # compute features
+
                 mel = audio_to_mel(buffer)
                 probs = run_inference(mel)
                 p_mantra = float(probs[1])
@@ -127,7 +114,7 @@ def process_stream():
 
                 t = time.time()
 
-                # HYBRID COUNTING RULE
+
                 if (p_mantra > CONF_THRESH) and (e > LOUD_ENOUGH) and (t - st.session_state.last_count_time > MIN_GAP):
                     st.session_state.count += 1
                     st.session_state.last_count_time = t
@@ -137,9 +124,6 @@ def process_stream():
             except queue.Empty:
                 pass
 
-# -------------------------------------------------
-# BUTTON LOGIC
-# -------------------------------------------------
 if start:
     st.session_state.running = True
     st.session_state.count = 0
