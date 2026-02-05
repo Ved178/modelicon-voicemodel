@@ -61,7 +61,7 @@ def run_inference(mel):
     interpreter.set_tensor(input_details[0]['index'], mel)
     interpreter.invoke()
 
-    out = interpreter.get_tensor(output_details[0]['index'])
+    out = interpreter.get_tensor(output_details[0]['index']).copy()
     return out[0]   # [p_non_mantra, p_mantra]
 
 # -------------------------------------------------
